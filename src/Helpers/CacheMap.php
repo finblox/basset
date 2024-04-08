@@ -12,19 +12,25 @@ class CacheMap
     private string $basePath;
     private string $filePath;
     private FilesystemAdapter $disk;
+    private FilesystemAdapter $cacheMapDisk;
     private bool $isActive = false;
     private bool $isDirty = false;
 
-    public function __construct(FilesystemAdapter $disk, string $basePath)
-    {
+    public function __construct(
+        FilesystemAdapter $disk,
+        FilesystemAdapter $cacheMapDisk,
+        string            $basePath,
+        string            $cachePath,
+    ) {
         $this->isActive = config('backpack.basset.cache_map', false);
         if (! $this->isActive) {
             return;
         }
 
         $this->disk = $disk;
+        $this->cacheMapDisk = $cacheMapDisk;
         $this->basePath = $basePath;
-        $this->filePath = $this->disk->path($this->basePath.'.basset');
+        $this->filePath = $this->cacheMapDisk->path($cachePath.'.basset');
 
         // Load map
         if (File::exists($this->filePath)) {
@@ -47,6 +53,10 @@ class CacheMap
         ksort($this->map);
 
         // save file
+        $dirName = File::dirname($this->filePath);
+        if (! File::exists($dirName)) {
+            File::makeDirectory($dirName);
+        }
         File::put($this->filePath, json_encode($this->map, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
