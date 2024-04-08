@@ -24,7 +24,8 @@ class BassetManager
     private FilesystemAdapter $disk;
     private array $loaded;
     private string $basePath;
-    private bool $dev = false;
+    private bool         $dev = false;
+    private array|string $defaultPutOption;
 
     public CacheMap $cacheMap;
     public LoadingTime $loader;
@@ -37,12 +38,20 @@ class BassetManager
 
         /** @var FilesystemAdapter */
         $disk = Storage::disk(config('backpack.basset.disk'));
+        /** @var FilesystemAdapter */
+        $cacheMapDisk = Storage::disk(config('backpack.basset.cache_map_disk', 'local'));
 
         $this->disk = $disk;
         $this->basePath = (string) Str::of(config('backpack.basset.path'))->finish('/');
         $this->dev = config('backpack.basset.dev_mode', false);
+        $this->defaultPutOption = config('backpack.basset.default_put_option', 'public');
 
-        $this->cacheMap = new CacheMap($this->disk, $this->basePath);
+        $this->cacheMap = new CacheMap(
+            $disk,
+            $cacheMapDisk,
+            $this->basePath,
+            (string) Str::of(config('backpack.basset.cache_path'))->finish('/'),
+        );
         $this->loader = new LoadingTime();
         $this->unarchiver = new Unarchiver();
         $this->output = new FileOutput();
@@ -207,7 +216,7 @@ class BassetManager
         // Clean source map
         $content = preg_replace('/sourceMappingURL=/', '', $content);
 
-        $result = $this->disk->put($path, $content, 'public');
+        $result = $this->disk->put($path, $content, $this->defaultPutOption);
 
         if ($result) {
             $output && $this->output->write($url, $attributes);
@@ -294,7 +303,7 @@ class BassetManager
         $cleanCode = preg_replace('/^'.($matches[0] ?? '').'/m', '', $cleanCode);
 
         // Store the file
-        $result = $this->disk->put($path, $cleanCode, 'public');
+        $result = $this->disk->put($path, $cleanCode, $this->defaultPutOption);
 
         // Delete old hashed files
         $dir = Str::beforeLast($path, '/');
@@ -391,7 +400,7 @@ class BassetManager
         // internalize all files in the folder except the zip file itself
         foreach (File::allFiles($tempDir) as $file) {
             if ($file->getRelativePathName() !== $fileName) {
-                $this->disk->put("$path/{$file->getRelativePathName()}", File::get($file), 'public');
+                $this->disk->put("$path/{$file->getRelativePathName()}", File::get($file), $this->defaultPutOption);
             }
         }
         // delete the whole temporary folder
@@ -445,7 +454,7 @@ class BassetManager
 
         // internalize all files in the folder
         foreach (File::allFiles($asset) as $file) {
-            $this->disk->put("$path/{$file->getRelativePathName()}", File::get($file), 'public');
+            $this->disk->put("$path/{$file->getRelativePathName()}", File::get($file), $this->defaultPutOption);
         }
 
         $this->cacheMap->addAsset($asset);

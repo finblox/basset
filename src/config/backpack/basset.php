@@ -13,6 +13,8 @@ return [
 
     // use cache map file (.basset)
     'cache_map' => env('BASSET_CACHE_MAP', true),
+    'cache_map_disk' => env('BASSET_CACHE_MAP_DISK', 'local'),
+    'cache_path' => 'basset/',
 
     // view paths that may use @basset
     // used to internalize assets in advance with artisan basset:internalize

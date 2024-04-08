@@ -71,7 +71,8 @@ class BassetCache extends Command
                 preg_match_all('/(basset|@bassetArchive|@bassetDirectory)\((.+)\)/', $content, $matches);
 
                 $matches[2] = collect($matches[2])
-                    ->map(fn ($match) => collect(explode(',', $match))
+                    ->map(
+                        fn ($match) => collect(explode(',', $match))
                             ->map(function ($arg) {
                                 try {
                                     return eval("return $arg;");
