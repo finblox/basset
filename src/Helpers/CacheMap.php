@@ -10,25 +10,31 @@ class CacheMap
 {
     private array $map = [];
     private string $basePath;
-    private string $filePath;
+    private string $cacheFilePath;
     private FilesystemAdapter $disk;
+    private FilesystemAdapter $cacheMapDisk;
     private bool $isActive = false;
     private bool $isDirty = false;
 
-    public function __construct(FilesystemAdapter $disk, string $basePath)
-    {
+    public function __construct(
+        FilesystemAdapter $disk,
+        FilesystemAdapter $cacheMapDisk,
+        string            $basePath,
+        string            $cachePath,
+    ) {
         $this->isActive = config('backpack.basset.cache_map', false);
         if (! $this->isActive) {
             return;
         }
 
         $this->disk = $disk;
+        $this->cacheMapDisk = $cacheMapDisk;
         $this->basePath = $basePath;
-        $this->filePath = $this->disk->path($this->basePath.'.basset');
+        $this->cacheFilePath = $this->cacheMapDisk->path($cachePath.'.basset');
 
         // Load map
-        if (File::exists($this->filePath)) {
-            $this->map = json_decode(File::get($this->filePath), true);
+        if (File::exists($this->cacheFilePath)) {
+            $this->map = json_decode(File::get($this->cacheFilePath), true);
         }
     }
 
@@ -47,7 +53,11 @@ class CacheMap
         ksort($this->map);
 
         // save file
-        File::put($this->filePath, json_encode($this->map, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $dirName = File::dirname($this->cacheFilePath);
+        if (! File::exists($dirName)) {
+            File::makeDirectory($dirName);
+        }
+        File::put($this->cacheFilePath, json_encode($this->map, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
     /**
